@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>super check ver.07</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; }
+    #testBox { margin-bottom: 20px; }
+    .result { font-weight: bold; margin-top: 20px; position: relative; }
+    #detailButton { margin-top: 10px; display: none;}
+    #details { white-space: pre-wrap; margin-top: 15px; }
+    .nobody-sign {
+      position: fixed;
+      left: 0;
+      bottom: 0;
+      width: 100vw;
+      background: #eef;
+      font-size: 14px;
+      color: #333;
+      text-align: center;
+      padding: 8px 0;
+      border-top: 1px solid #cce;
+      opacity: 0.9;
+      z-index: 9999;
+      letter-spacing: 1px;
+    }
+    .nobody-sign .icon {
+      margin-right: 7px;
+      color: #669;
+      font-size: 15px;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+  <h1>super check ver.07</h1>
+  <div id="testBox">ロード中...</div>
+  <button id="nextButton" style="display:none;">次へ</button>
+  <div class="result" id="result"></div>
+  <button id="detailButton" onclick="showDetails()">答え合わせを見る</button>
+  <div id="details"></div>
+  <!-- 下部にサイン＋説明 -->
+  <div class="nobody-sign">
+    <span class="icon">🖊️</span>
+    このサイトは nobody・t が作成・管理しています
+  </div>
+  <script>
+    let questions = [];
+    let current = 0;
+    let score = 0;
+    let answers = [];
+    let detailsText = "";
+
+    function showQuestion(idx) {
+      if (idx < questions.length) {
+        document.getElementById('testBox').innerHTML = `
+          <div>
+            問題${idx + 1}: ${questions[idx].jp}<br>
+            <input type="text" id="answer" placeholder="Type English here">
+          </div>
+        `;
+        document.getElementById('nextButton').textContent = idx === questions.length - 1 ? "採点する" : "次へ";
+        document.getElementById('nextButton').style.display = "inline-block";
+        document.getElementById('result').textContent = "";
+        document.getElementById('detailButton').style.display = "none";
+        document.getElementById('details').textContent = "";
+
+        // Enterキーで次へ進む
+        const answerInput = document.getElementById('answer');
+        if (answerInput) {
+          answerInput.focus();
+          answerInput.onkeydown = function(event) {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              document.getElementById('nextButton').click();
+            }
+          };
+        }
+      } else {
+        // 結果表示（点数のみ）
+        document.getElementById('testBox').innerHTML = "";
+        document.getElementById('nextButton').style.display = "none";
+        document.getElementById('result').innerHTML =
+          `あなたの得点: ${score}/${questions.length}`;
+        document.getElementById('detailButton').style.display = "inline-block";
+        // 詳細テキストを準備
+        detailsText = "";
+        questions.forEach((q, i) => {
+          detailsText += `問${i+1}: ${q.jp} → ${answers[i] || "(無回答)"}  `;
+          detailsText += (answers[i] && answers[i].toLowerCase() === q.en) ? "○" : `×（正解: ${q.en}）`;
+          detailsText += "\n";
+        });
+      }
+    }
+
+    document.getElementById('nextButton').onclick = function() {
+      const input = document.getElementById('answer');
+      if (input) {
+        answers[current] = input.value.trim();
+        if (input.value.trim().toLowerCase() === questions[current].en) score++;
+      }
+      current++;
+      showQuestion(current);
+    };
+
+    function showDetails() {
+      document.getElementById('details').textContent = detailsText;
+      document.getElementById('detailButton').style.display = "none";
+    }
+
+    // words.txtから問題データを読み込む
+    fetch('words.txt')
+      .then(res => res.text())
+      .then(text => {
+        questions = text
+          .split('\n')
+          .map(line => line.trim())
+          .filter(line => line)
+          .map(line => {
+            const [jp, en] = line.split(',');
+            return { jp: jp, en: en };
+          });
+        showQuestion(current);
+      })
+      .catch(err => {
+        document.getElementById('testBox').innerHTML = 'words.txtの読み込みに失敗しました。';
+      });
+  </script>
+</body>
+</html>
